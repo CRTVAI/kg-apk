@@ -1,0 +1,22 @@
+// Init script: force compileSdk >= 34 on all Android library subprojects.
+// This is needed because some Flutter plugins (e.g. file_picker 5.x) hardcode
+// compileSdkVersion 33, which causes AAR metadata failures when their transitive
+// AndroidX dependencies require compileSdk 34+.
+allprojects {
+    afterEvaluate { project ->
+        if (project.plugins.hasPlugin('com.android.library')) {
+            def android = project.extensions.findByName('android')
+            if (android != null) {
+                try {
+                    def current = android.compileSdkVersion
+                    if (current instanceof Integer && current < 34) {
+                        android.compileSdkVersion 36
+                        logger.lifecycle("compileSdkOverride: patched ${project.name} compileSdk $current → 36")
+                    }
+                } catch (Exception e) {
+                    // Ignore — property unavailable in this project variant
+                }
+            }
+        }
+    }
+}

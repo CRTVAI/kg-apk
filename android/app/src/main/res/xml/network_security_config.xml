@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Production network security policy.
+    - All traffic must use HTTPS; cleartext HTTP is blocked.
+    - Applies to API calls, Firebase, and WebView content.
+    - Debug/profile builds inherit Android's default (cleartext allowed
+      on localhost) via the separate debug manifest.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

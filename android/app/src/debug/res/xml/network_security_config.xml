@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Debug-only network security policy.
+    Allows cleartext traffic on loopback (127.0.0.1 / ::1) so the Flutter
+    tool can communicate with the running app (hot reload, DevTools, etc.).
+    This file is only merged into debug builds and is NOT included in release.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <!-- Trust user-installed CAs in debug builds for local HTTPS proxies -->
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Flutter tool VM service runs on localhost -->
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">::1</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

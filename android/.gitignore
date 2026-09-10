@@ -1,0 +1,14 @@
+gradle-wrapper.jar
+/.gradle
+/captures/
+/gradlew
+/gradlew.bat
+/local.properties
+GeneratedPluginRegistrant.java
+
+# Signing credentials — never commit keystores or key files
+key.properties
+karam-key.properties
+**/*.keystore
+**/*.jks
+**/*.pem
