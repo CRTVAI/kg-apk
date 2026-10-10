@@ -1409,13 +1409,15 @@ class _DocumentsSection extends StatelessWidget {
   String _documentName(VehicleDocument document) {
     final rawName = document.filename?.toString().trim() ?? '';
     if (rawName.isEmpty) return 'Document';
-    return rawName.split(RegExp(r'[\\/]')).last;
+    return rawName;
   }
 
   String _documentMeta(VehicleDocument document) {
     final type = document.type?.toString().trim() ?? '';
-    if (type.isNotEmpty) return type.toUpperCase();
-    return document.filesize?.toString() ?? '';
+    if (type.isEmpty || type.toLowerCase() == 'null' || type == '0') {
+      return '';
+    }
+    return type;
   }
 
   @override
@@ -1424,15 +1426,15 @@ class _DocumentsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _SectionTitle(
-          title: 'Documents',
-          icon: Icons.folder_copy_outlined,
+          title: 'Attached Documents',
+          icon: Icons.picture_as_pdf_outlined,
         ),
         Card(
           child: documents.isEmpty
               ? Padding(
                   padding: const EdgeInsets.all(16),
                   child: Text(
-                    'No vehicle documents found.',
+                    'No documents attached.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppTheme.muted,
                         ),

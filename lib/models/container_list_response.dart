@@ -78,6 +78,7 @@ class Containers {
   // String? notesDocument;
 
   List<VehicleElement>? vehicles;
+  List<VehicleElement>? containerVehicles;
   List<dynamic>? containerImages;
   List<ContainerDocument>? containerDocuments;
   LoadingPort? status;
@@ -140,6 +141,7 @@ class Containers {
       // this.vgm,
       // this.notesDocument,
       this.vehicles,
+      this.containerVehicles,
       this.containerImages,
       this.containerDocuments,
       this.status,
@@ -163,31 +165,23 @@ class Containers {
 
   factory Containers.fromJson(Map<String, dynamic> json) => Containers(
         id: json["id"],
-        statusId: json["status_id"] == null ? null : json["status_id"],
-        shipperId: json["shipper_id"] == null ? null : json["shipper_id"],
-        shippingLineId:
-            json["shipping_line_id"] == null ? null : json["shipping_line_id"],
-        consigneeId: json["consignee_id"] == null ? null : json["consignee_id"],
-        preCarriageId:
-            json["pre_carriage_id"] == null ? null : json["pre_carriage_id"],
+        statusId: json["status_id"],
+        shipperId: json["shipper_id"],
+        shippingLineId: json["shipping_line_id"],
+        consigneeId: json["consignee_id"],
+        preCarriageId: json["pre_carriage_id"],
         vesselName: json["vessel_name"],
-        loadingPortId:
-            json["loading_port_id"] == null ? null : json["loading_port_id"],
-        dischargePortId: json["discharge_port_id"] == null
-            ? null
-            : json["discharge_port_id"],
-        destinationPortId: json["destination_port_id"] == null
-            ? null
-            : json["destination_port_id"],
+        loadingPortId: json["loading_port_id"],
+        dischargePortId: json["discharge_port_id"],
+        destinationPortId: json["destination_port_id"],
         // notifyPartId: json["notify_part_id"],
-        bookingNo: json["booking_no"] == null ? null : json["booking_no"],
-        containerNo: json["container_no"] == null ? null : json["container_no"],
+        bookingNo: json["booking_no"],
+        containerNo: json["container_no"],
         // cutOff: json["cut_off"],
         departure: _parseDate(json["departure"]),
         arrival: _parseDate(json["arrival"]),
-        pierTerminalId:
-            json["pier_terminal_id"] == null ? null : json["pier_terminal_id"],
-        contractNo: json["contract_no"] == null ? null : json["contract_no"],
+        pierTerminalId: json["pier_terminal_id"],
+        contractNo: json["contract_no"],
         // voyageNo: json["voyage_no"],
         // sealNo: json["seal_no"],
         // exportReference:json["export_reference"],
@@ -201,11 +195,11 @@ class Containers {
         // draft: json["draft"],
         // ownerId: json["owner_id"],
         // arrivalYm: json["arrival_ym"],
-        requestType: json["request_type"] == null ? null : json["request_type"],
-        dateCreated: json["date_created"] == null ? null : json["date_created"],
+        requestType: json["request_type"],
+        dateCreated: json["date_created"],
         // searchBody: json["search_body"],
         // aesBlockBody: json["aes_block_body"],
-        allPaid: json["all_paid"] == null ? null : json["all_paid"],
+        allPaid: json["all_paid"],
         // fowardingAgentId: json["fowarding_agent_id"],
         // vgm: json["vgm"],
         // notesDocument: json["notes_document"],
@@ -221,6 +215,10 @@ class Containers {
             ? []
             : List<VehicleElement>.from(
                 json["vehicles"].map((x) => VehicleElement.fromJson(x))),
+        containerVehicles: json["container_vehicle"] == null
+            ? []
+            : List<VehicleElement>.from(json["container_vehicle"]
+                .map((x) => VehicleElement.fromJson(x))),
         status: json["status"] == null
             ? null
             : LoadingPort.fromJson(json["status"]),
@@ -319,6 +317,8 @@ class Containers {
         // "notes_document": notesDocument,
 
         "vehicles": List<dynamic>.from(vehicles!.map((x) => x.toJson())),
+        "container_vehicle":
+            List<dynamic>.from(containerVehicles!.map((x) => x.toJson())),
         "container_images": List<dynamic>.from(containerImages!.map((x) => x)),
         "container_documents":
             List<dynamic>.from(containerDocuments!.map((x) => x.toJson())),

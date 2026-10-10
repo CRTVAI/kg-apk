@@ -1,6 +1,8 @@
 import 'package:cargo/controllers/container_controller.dart';
 import 'package:cargo/controllers/vehicle_controller.dart';
+import 'package:cargo/controllers/auth_controller.dart';
 import 'package:cargo/models/container_list_response.dart';
+import 'package:cargo/models/login_response.dart';
 import 'package:cargo/ui/styles/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +21,7 @@ class ContainerDetailsScreen extends StatefulWidget {
 class _ContainerDetailsScreenState extends State<ContainerDetailsScreen> {
   final ContainerController containerController = Get.find();
   final VehicleController _vehicleController = Get.find();
+  final AuthController _authController = Get.find();
 
   Containers get container =>
       containerController.selectedContainer.value ?? widget.con;
@@ -166,7 +169,12 @@ class _ContainerDetailsScreenState extends State<ContainerDetailsScreen> {
       container.dischargePortName,
     );
     final vehicles = container.vehicles ?? <VehicleElement>[];
+    final allocationVehicles =
+        (container.containerVehicles?.isNotEmpty ?? false)
+            ? container.containerVehicles!
+            : vehicles;
     final isPaid = _isPaid(container.allPaid);
+    final currentUser = _authController.loginResponse.value?.data.user;
 
     return Scaffold(
       appBar: AppBar(
@@ -281,26 +289,16 @@ class _ContainerDetailsScreenState extends State<ContainerDetailsScreen> {
               const SizedBox(height: 24),
               _SectionTitle(
                 icon: Icons.directions_car_outlined,
-                title: 'Vehicles',
-                trailing: '${vehicles.length}',
+                title: 'Vehicle Allocation',
+                trailing: '${allocationVehicles.length}',
               ),
               const SizedBox(height: 10),
-              if (vehicles.isEmpty)
-                const _NoVehiclesCard()
-              else
-                ...vehicles.asMap().entries.map(
-                      (entry) => Padding(
-                        padding: EdgeInsets.only(
-                          bottom: entry.key == vehicles.length - 1 ? 0 : 10,
-                        ),
-                        child: _VehicleCard(
-                          index: entry.key + 1,
-                          vehicle: entry.value,
-                          displayValue: _value,
-                          onCopy: _copyValue,
-                        ),
-                      ),
-                    ),
+              _VehicleAllocationSection(
+                vehicles: allocationVehicles,
+                currentUser: currentUser,
+                displayValue: _value,
+                onCopy: _copyValue,
+              ),
             ],
           ),
         ),
@@ -944,98 +942,225 @@ class _RouteStop {
   const _RouteStop({required this.label, required this.value});
 }
 
-class _VehicleCard extends StatelessWidget {
-  final int index;
-  final VehicleElement vehicle;
-  final String Function(dynamic value) displayValue;
-  final Future<void> Function(String value, String label) onCopy;
-
-  const _VehicleCard({
-    required this.index,
-    required this.vehicle,
+class _VehicleAllocationSection extends StatelessWidget {
+  const _VehicleAllocationSection({
+    required this.vehicles,
+    required this.currentUser,
     required this.displayValue,
     required this.onCopy,
   });
 
+  final List<VehicleElement> vehicles;
+  final AppUser? currentUser;
+  final String Function(dynamic value) displayValue;
+  final Future<void> Function(String value, String label) onCopy;
+
+  int? get _currentAllocationUserId {
+    final role = currentUser?.role?.toString();
+    if (role == '3') {
+      final mainUserId =
+          int.tryParse(currentUser?.mainUserId?.toString() ?? '');
+      if (mainUserId != null) return mainUserId;
+    }
+    return currentUser?.id;
+  }
+
+  List<_BuyerAllocation> get _allocations {
+    final grouped = <String, _BuyerAllocation>{};
+    for (final item in vehicles) {
+      final user = item.user;
+      final key = (user?.id ?? item.userId ?? 'unknown').toString();
+      grouped.putIfAbsent(
+        key,
+        () => _BuyerAllocation(
+          userId: user?.id ?? int.tryParse(item.userId?.toString() ?? ''),
+          buyerName: displayValue(user?.name),
+          vehicles: <VehicleElement>[],
+        ),
+      );
+      grouped[key]!.vehicles.add(item);
+    }
+    return grouped.values.toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final data = vehicle.vehicle;
-    final descriptionParts = [
+    final allocations = _allocations;
+    if (allocations.isEmpty) return const _NoVehiclesCard();
+
+    final currentUserId = _currentAllocationUserId;
+    return Column(
+      children: allocations.asMap().entries.map((entry) {
+        final allocation = entry.value;
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: entry.key == allocations.length - 1 ? 0 : 10,
+          ),
+          child: _BuyerAllocationCard(
+            allocation: allocation,
+            isCurrentUser: allocation.userId != null &&
+                currentUserId != null &&
+                allocation.userId == currentUserId,
+            displayValue: displayValue,
+            onCopy: onCopy,
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _BuyerAllocation {
+  _BuyerAllocation({
+    required this.userId,
+    required this.buyerName,
+    required this.vehicles,
+  });
+
+  final int? userId;
+  final String buyerName;
+  final List<VehicleElement> vehicles;
+}
+
+class _BuyerAllocationCard extends StatelessWidget {
+  const _BuyerAllocationCard({
+    required this.allocation,
+    required this.isCurrentUser,
+    required this.displayValue,
+    required this.onCopy,
+  });
+
+  final _BuyerAllocation allocation;
+  final bool isCurrentUser;
+  final String Function(dynamic value) displayValue;
+  final Future<void> Function(String value, String label) onCopy;
+
+  String _vehicleDescription(VehicleElement item) {
+    final data = item.vehicle;
+    final parts = [
       displayValue(data?.modal),
       displayValue(data?.companyName),
       displayValue(data?.name),
     ].where((value) => value != '—').toList();
-    final description = descriptionParts.isEmpty
-        ? 'Vehicle information unavailable'
-        : descriptionParts.join(' ');
-    final vin = displayValue(data?.vin);
+    return parts.isEmpty ? 'Vehicle information unavailable' : parts.join(' ');
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Card(
+      color: isCurrentUser ? const Color(0xFFEFF6FF) : null,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(
+          color: isCurrentUser
+              ? AppTheme.primary.withOpacity(.35)
+              : AppTheme.border,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.border),
-              ),
-              child: const Icon(
-                Icons.directions_car_outlined,
-                color: AppTheme.accent,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Vehicle $index',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.muted,
-                          fontWeight: FontWeight.w700,
-                        ),
+            Text(
+              'Buyer',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.muted,
+                    fontWeight: FontWeight.w700,
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    description,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(
+                  Icons.account_circle_outlined,
+                  color: AppTheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    allocation.buyerName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
                         ),
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'VIN  $vin',
-                          softWrap: true,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                        ),
-                      ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        tooltip: 'Copy VIN',
-                        onPressed: () => onCopy(vin, 'VIN'),
-                        icon: const Icon(
-                          Icons.copy_rounded,
-                          size: 18,
-                          color: AppTheme.primary,
-                        ),
-                      ),
-                    ],
+                ),
+                if (isCurrentUser)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withOpacity(.1),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      'YOU',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
                   ),
-                ],
-              ),
+              ],
             ),
+            const SizedBox(height: 12),
+            ...allocation.vehicles.asMap().entries.map((entry) {
+              final item = entry.value;
+              final vin = displayValue(item.vehicle?.vin);
+              return Container(
+                margin: EdgeInsets.only(
+                  top: entry.key == 0 ? 0 : 8,
+                ),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _vehicleDescription(item),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            vin,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: AppTheme.muted,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                          ),
+                        ),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          tooltip: 'Copy VIN',
+                          onPressed: () => onCopy(vin, 'VIN'),
+                          icon: const Icon(
+                            Icons.copy_rounded,
+                            size: 18,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
           ],
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 
 import '../../controllers/vehicle_controller.dart';
@@ -250,11 +251,15 @@ class _CarImagesScreenState extends State<CarImagesScreen> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Icon(Icons.share_rounded, size: 19),
+                              : const FaIcon(
+                                  FontAwesomeIcons.whatsapp,
+                                  size: 19,
+                                  color: Color(0xFF25D366),
+                                ),
                           label: Text(
                             sharing
                                 ? 'Preparing photos...'
-                                : 'Share all ${_showUnloading ? 'unloading' : 'warehouse'} photos',
+                                : 'Share to WhatsApp',
                           ),
                         ),
                       );
